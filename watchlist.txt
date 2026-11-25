@@ -3,3 +3,6 @@
 VOO   # S&P500 ETF
 QQQ   # NASDAQ100 ETF
 VTI   # 米国全体 ETF
+AMZN  # Amazon(保有)
+AMD   # AMD(保有)
+BRK-B # バークシャー・ハサウェイB(保有)
