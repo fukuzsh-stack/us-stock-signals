@@ -183,6 +183,34 @@ def short_score(df: pd.DataFrame):
     return pts, reasons
 
 
+def caution_signals(df: pd.DataFrame) -> list[str]:
+    """保有中・ウォッチ中の銘柄に出す「注意サイン」(売り推奨ではなく、状況が変わった合図)。"""
+    if len(df) < 60:
+        return []
+    last = df.iloc[-1]
+    out = []
+    s50, s200, c = last["sma50"], last["sma200"], last["Close"]
+    if _ok(s200):
+        recent = df.iloc[-6:-1]
+        if c < s200 and (recent["Close"] >= recent["sma200"]).any():
+            out.append("200日線を割り込んだ")
+        elif c < s200:
+            out.append("200日線より下(長期下降トレンド)")
+    if _ok(s50) and _ok(s200) and len(df) > 12:
+        d = df["sma50"] - df["sma200"]
+        if d.iloc[-1] < 0 and (d.iloc[-11:-1] >= 0).any():
+            out.append("デッドクロス(50日線が200日線を下回った)")
+    if last["rsi"] >= 75:
+        out.append(f"RSI {last['rsi']:.0f}(買われすぎ・過熱)")
+    h = df["macd_hist"]
+    if any(h.iloc[-i] < 0 and h.iloc[-i - 1] >= 0 for i in range(1, 4)):
+        out.append("MACDデッドクロス(直近3日)")
+    hi = last["high252"]
+    if _ok(hi) and hi > 0 and 1 - c / hi >= 0.25:
+        out.append(f"高値から {c / hi - 1:.0%} 下落")
+    return out
+
+
 def score_ticker(df: pd.DataFrame, fund: dict | None):
     t_pts, t_rs = long_trend_score(df)
     f_pts, f_rs = fundamental_score(fund or {})
@@ -205,6 +233,9 @@ def score_ticker(df: pd.DataFrame, fund: dict | None):
         "long_fund": f_pts,
         "long_reasons": t_rs + f_rs + a_rs,
         "long_analyst": a_pts,
+        "warns": caution_signals(df),
+        "sma50": round(float(last["sma50"]), 2) if _ok(last["sma50"]) else None,
+        "sma200": round(float(last["sma200"]), 2) if _ok(last["sma200"]) else None,
         "analyst": a_info or None,
         "short": s_pts,
         "short_reasons": s_rs,

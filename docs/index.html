@@ -57,6 +57,43 @@ details ul{margin:4px 0 0;padding-left:1.2em}details h4{margin:8px 0 0;font-size
 footer{margin-top:28px;font-size:13px;color:var(--mute);line-height:1.7}
 @media(max-width:600px){.meters{grid-template-columns:minmax(0,1fr)}.spark{width:100%}}
 @media(prefers-reduced-motion:no-preference){.needle{transition:left .5s ease-out}}
+
+[hidden]{display:none!important}
+button.top{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0;min-height:36px}
+.chev{color:var(--mute);font-size:22px;line-height:1;margin-left:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:13px;padding:2px 8px;border-radius:12px;border:1px solid var(--dn);color:var(--dn)}
+.sheet{position:fixed;inset:0;z-index:10;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet .in{max-width:860px;margin:0 auto;padding:0 max(4vw,14px) 40px}
+.sbar{position:sticky;top:0;background:var(--bg);padding:10px 0;display:flex;align-items:center;gap:10px;z-index:1}
+.btn{min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:22px;font:inherit;font-size:15px;cursor:pointer}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sh h2{margin:4px 0 2px;font-size:clamp(26px,6vw,36px);line-height:1.1}
+.cbox{position:relative;height:190px;margin:12px 0 4px;border-bottom:1px solid var(--ink)}
+.cbox svg{position:absolute;inset:0;width:100%;height:100%}
+.ylab{position:absolute;left:4px;font-size:12px;color:var(--mute);background:var(--bg);padding:0 3px}.ylab.t{top:0}.ylab.b{bottom:2px}
+.lg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:6px 0 14px}
+.lg i{display:inline-block;width:18px;height:0;border-top:2px solid var(--ink);vertical-align:middle;margin-right:5px}
+.lg i.a{border-color:var(--acc)}.lg i.b{border-top-style:dashed;border-color:var(--mute)}
+.sh h3,#panel h3{font-size:16px;margin:20px 0 8px}
+.br{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3.6em;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+.br .bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden}.br .bar i{display:block;height:100%;background:var(--acc)}
+.br b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.br span{color:var(--mute)}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;font-size:14px}
+.kv div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:4px 0}.kv span{color:var(--mute);white-space:nowrap}a{color:var(--acc)}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.form input{min-height:44px;font:inherit;font-size:16px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%}
+.form button{grid-column:1/-1}
+.msg{font-size:14px;color:var(--dn);min-height:20px}
+.row2{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;margin-top:8px}.row2 b{font-variant-numeric:tabular-nums}
+.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{min-height:40px;font-size:14px}
+textarea{width:100%;min-height:90px;font:13px/1.4 ui-monospace,monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--mute);font-size:13px}tr.base td{color:var(--mute)}
+.scroll{overflow-x:auto}.note{font-size:14px;color:var(--mute);line-height:1.7}.note li{margin:4px 0}
+.lead{font-size:16px;line-height:1.7;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}
+@media(max-width:600px){.kv{grid-template-columns:minmax(0,1fr)}.form{grid-template-columns:repeat(2,minmax(0,1fr))}.form input:first-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -71,25 +108,30 @@ footer{margin-top:28px;font-size:13px;color:var(--mute);line-height:1.7}
     <button role="tab" data-v="long" aria-selected="true">長期 買い候補</button>
     <button role="tab" data-v="short" aria-selected="false">短期 買いシグナル</button>
     <button role="tab" data-v="watch" aria-selected="false">ウォッチリスト</button>
+    <button role="tab" data-v="hold" aria-selected="false">保有</button>
     <button role="tab" data-v="all" aria-selected="false">全銘柄</button>
+    <button role="tab" data-v="test" aria-selected="false">検証</button>
   </div>
   <div class="tools">
     <input id="q" type="search" placeholder="ティッカー・社名で検索" autocomplete="off">
     <select id="sector"><option value="">全セクター</option></select>
   </div>
   <div class="list" id="list"></div>
+  <div id="panel"></div>
   <button class="more" id="more" hidden>さらに表示</button>
   <footer>
     <p><b>スコアの中身</b>　長期(100点)=長期トレンド50点(200日線・50日線・1年モメンタム・押し目)+割安度・財務50点(PER・PEG・ROE・成長率・負債・利益率)+アナリスト評価20点(推奨平均・目標株価までの上昇余地。5人未満は対象外)。取れた項目だけで100点に換算します。短期(100点)=RSI反発25・MACDクロス20・ボリンジャー回復20・出来高急増20・200日線より上15。</p>
+    <p><b>注意サイン</b>=200日線の割り込み、デッドクロス、RSI75以上、MACDデッドクロス、高値から25%以上の下落。ウォッチリストと保有銘柄の一覧に表示します。</p>
     <p>データ: Yahoo Finance(yfinance経由、終値ベース)。本ページは機械的なスクリーニング結果であり、投資助言・売買の推奨ではありません。投資判断はご自身の責任で行ってください。</p>
   </footer>
 </div>
+<div class="sheet" id="detail" hidden></div>
 <script>
 {
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let D=null,view='long',shown=30;
-try{const h=location.hash.slice(1);if(['long','short','watch','all'].includes(h))view=h}catch(e){}
+try{const h=location.hash.slice(1);if(['long','short','watch','hold','all','test'].includes(h))view=h}catch(e){}
 
 function rows(){
   const q=$('q').value.trim().toLowerCase(),sec=$('sector').value;
@@ -118,16 +160,30 @@ function analyst(s){
   const up=a.upside==null?'':`<span class="${a.upside>=0?'up':'dn'}">${a.upside>=0?'+':''}${(a.upside*100).toFixed(0)}%</span>`;
   return `<div class="an"><span>アナリスト <b>${esc(lab)}</b> ${a.rec==null?'':esc(a.rec.toFixed(1))+'/5'}<small>(${esc(a.n_analysts)}人)</small></span><span>目標 $${esc(a.target??'-')} ${up}</span></div>`;
 }
+const LS='usig_holdings_v1';
+let H=[],armed=-1,pushed=false,CH=null,BT=null;
+function loadH(){try{H=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){H=window.__H__||[]}if(!Array.isArray(H))H=[]}
+function saveH(){try{localStorage.setItem(LS,JSON.stringify(H))}catch(e){}}
+const isHeld=t=>H.some(h=>h.t===t);
+const chips=s=>(s.warns||[]).map(w=>`<span class="chip">${esc(w)}</span>`).join('');
+const fmt=(x,sign)=>x==null||isNaN(x)?'-':(sign&&x>0?'+':'')+(x*100).toFixed(1)+'%';
+const usd=x=>(x<0?'-':'')+'$'+Math.abs(x).toLocaleString('en-US',{maximumFractionDigits:0});
 function card(s){
   const ch=s.change||0,cls=ch>=0?'up':'dn';
   const lr=(s.long_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
   const sr=(s.short_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
-  return `<article class="card"><div class="top">${s.watch?'<span class="star" aria-label="ウォッチリスト">★</span>':''}<span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}<small class="${cls}">${ch>=0?'+':''}${esc((ch*100).toFixed(2))}%</small></span></div>
+  return `<article class="card"><button class="top" data-t="${esc(s.t)}" aria-label="${esc(s.t)}の詳細を開く">${s.watch?'<span class="star" aria-label="ウォッチリスト">★</span>':''}<span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}<small class="${cls}">${ch>=0?'+':''}${esc((ch*100).toFixed(2))}%</small></span><span class="chev">›</span></button>
   <div class="meters"><div>${meter('長期',s.long,D.thresholds.long)}${meter('短期',s.short,D.thresholds.short)}</div>${spark(s.spark)}</div>
-  ${analyst(s)}<details><summary>理由を見る(RSI ${esc(s.rsi)}・${esc(s.sector)})</summary><h4>長期</h4><ul>${lr}</ul><h4>短期</h4><ul>${sr}</ul></details></article>`;
+  ${analyst(s)}${(s.watch||isHeld(s.t))&&(s.warns||[]).length?`<div class="chips">${chips(s)}</div>`:''}<details><summary>理由を見る(RSI ${esc(s.rsi)}・${esc(s.sector)})</summary><h4>長期</h4><ul>${lr}</ul><h4>短期</h4><ul>${sr}</ul></details></article>`;
 }
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
+  const sel=document.querySelector('#tabs button[aria-selected=true]'),tb=$('tabs');
+  if(sel&&tb)tb.scrollLeft=Math.max(0,sel.offsetLeft-(tb.clientWidth-sel.offsetWidth)/2);
+  const special=view==='hold'||view==='test';
+  document.querySelector('.tools').hidden=special;$('list').hidden=special;
+  if(special){$('more').hidden=true;if(view==='hold')$('panel').innerHTML=holdHTML();else showTest();return}
+  $('panel').innerHTML='';
   const r=rows();
   $('list').innerHTML=r.length?r.slice(0,shown).map(card).join(''):`<div class="empty">${view==='watch'?'watchlist.txt に銘柄を追加すると表示されます':'今日は該当なし'}</div>`;
   $('more').hidden=r.length<=shown;
@@ -146,6 +202,111 @@ function drawDist(){
 }
 const ro=new ResizeObserver(drawDist);ro.observe($('dist'));
 
+
+/* ---------- 保有(このスマホ内だけに保存) ---------- */
+function holdHTML(){
+  const by=Object.fromEntries(D.stocks.map(s=>[s.t,s]));
+  let tc=0,tv=0,miss=0;
+  const items=H.map((h,i)=>{
+    const s=by[h.t],cost=h.shares*h.cost;
+    const del=`<button class="btn" data-del="${i}">${armed===i?'もう一度押して削除':'削除'}</button>`;
+    if(!s){miss++;return `<article class="card"><span class="tk">${esc(h.t)}</span><p class="dim" style="margin:6px 0">${esc(h.shares)}株・平均$${esc(h.cost)}。この銘柄は分析対象外です(watchlist.txt に追加すると表示されます)。</p><div class="acts">${del}</div></article>`}
+    const v=h.shares*s.price,pl=v-cost;tc+=cost;tv+=v;
+    const w=(s.warns||[]).length?`<div class="chips">${chips(s)}</div>`:'<p class="dim" style="margin:8px 0 0;font-size:14px">注意サインはありません</p>';
+    return `<article class="card"><button class="top" data-t="${esc(s.t)}" aria-label="${esc(s.t)}の詳細を開く"><span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}</span><span class="chev">›</span></button>
+      <div class="row2"><span>${esc(h.shares)}株 × 平均$${esc(h.cost)}</span><span>評価額 <b>${usd(v)}</b></span><span class="${pl>=0?'up':'dn'}"><b>${pl>=0?'+':''}${usd(pl)}(${fmt(pl/cost,1)})</b></span></div>${w}<div class="acts">${del}</div></article>`;
+  }).join('');
+  const tot=tc?`<div class="lead">合計 評価額 <b>${usd(tv)}</b>・取得額 ${usd(tc)}・損益 <b class="${tv>=tc?'up':'dn'}">${tv>=tc?'+':''}${usd(tv-tc)}(${fmt((tv-tc)/tc,1)})</b>${miss?`<br><span class="dim">※分析対象外の${miss}銘柄は合計に含めていません</span>`:''}</div>`:'';
+  return `<h3>保有銘柄(米ドル)</h3><p class="note">入力した内容は<b>このスマホのブラウザ内だけ</b>に保存され、GitHubや外部には送られません。ブラウザのデータを消すと消えるので、下のバックアップを使ってください。「注意サイン」は売りの推奨ではなく、状況が変わった合図です。</p>
+  <div class="form"><input id="hT" placeholder="ティッカー(例 AAPL)" autocapitalize="characters" autocomplete="off"><input id="hS" placeholder="株数" inputmode="decimal"><input id="hC" placeholder="平均取得単価($)" inputmode="decimal"><button class="btn pri" id="hAdd">追加</button></div><div class="msg" id="hMsg" role="status"></div>
+  ${tot}<div class="list">${items||'<div class="empty">まだ登録がありません</div>'}</div>
+  <details><summary>バックアップ(書き出し・読み込み)</summary><textarea id="hBk" aria-label="バックアップ用テキスト">${esc(JSON.stringify(H))}</textarea><div class="acts"><button class="btn" id="hLoad">このテキストを読み込む</button></div><p class="note">別のスマホに移すときも、このテキストをコピーして読み込みます。</p></details>`;
+}
+function holdAdd(){
+  const t=$('hT').value.trim().toUpperCase().replace('.','-'),sh=parseFloat($('hS').value),c=parseFloat($('hC').value),m=$('hMsg');
+  if(!/^[A-Z0-9-]{1,10}$/.test(t)){m.textContent='ティッカーは英数字で入力してください(例 AAPL)';return}
+  if(!(sh>0)||!(c>0)){m.textContent='株数と取得単価は0より大きい数字で入力してください';return}
+  const o=H.find(h=>h.t===t);
+  if(o){const n=o.shares+sh;o.cost=Math.round((o.shares*o.cost+sh*c)/n*100)/100;o.shares=n}
+  else H.push({t,shares:sh,cost:c});
+  saveH();render();
+}
+function holdLoad(){
+  try{const a=JSON.parse($('hBk').value);
+    if(!Array.isArray(a))throw 0;
+    const ok=a.filter(h=>h&&/^[A-Z0-9-]{1,10}$/.test(h.t)&&h.shares>0&&h.cost>0).map(h=>({t:h.t,shares:+h.shares,cost:+h.cost}));
+    H=ok;saveH();render();$('hMsg').textContent=ok.length+'件を読み込みました'
+  }catch(e){$('hMsg').textContent='読み込めませんでした。書き出したテキストをそのまま貼ってください'}
+}
+
+/* ---------- 検証 ---------- */
+function showTest(){
+  const P=$('panel');P.innerHTML='<div class="empty">読み込み中…</div>';
+  const get=window.__BT__?Promise.resolve(window.__BT__):BT?Promise.resolve(BT):fetch('data/backtest.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()});
+  get.then(b=>{BT=b;if(view==='test')P.innerHTML=testHTML(b)}).catch(()=>{if(view==='test')P.innerHTML='<div class="empty">検証データがまだありません(次の自動実行後に表示されます)</div>'});
+}
+function btTable(title,o){
+  if(!o)return '';
+  const rows=o.buckets.map(b=>b.win==null?`<tr><td>${esc(b.label)}</td><td>${b.n}</td><td colspan="3" class="dim" style="text-align:left">件数不足</td></tr>`:`<tr><td>${esc(b.label)}</td><td>${b.n.toLocaleString()}</td><td>${(b.win*100).toFixed(0)}%</td><td>${fmt(b.mean,1)}</td><td class="${b.excess>=0?'up':'dn'}">${fmt(b.excess,1)}</td></tr>`).join('');
+  return `<h3>${title}</h3><div class="scroll"><table><thead><tr><th>点数</th><th>件数</th><th>勝率</th><th>平均</th><th>市場平均比</th></tr></thead><tbody>${rows}<tr class="base"><td>全体</td><td>${o.all.n.toLocaleString()}</td><td>${(o.all.win*100).toFixed(0)}%</td><td>${fmt(o.all.mean,1)}</td><td>-</td></tr></tbody></table></div>`;
+}
+function testHTML(b){
+  if(!b.short)return '<div class="empty">検証データがありません</div>';
+  const top=o=>o&&o.buckets[o.buckets.length-1];
+  const sh=top(b.short['20d']),tr=top(b.trend&&b.trend['60d']);
+  const line=(name,x,days)=>x&&x.win!=null?`<li>${name}が点灯した後、${days}で市場平均に対して <b class="${x.excess>=0?'up':'dn'}">${fmt(x.excess,1)}</b>、プラスで終わった割合は <b>${(x.win*100).toFixed(0)}%</b>(${x.n.toLocaleString()}件${x.n<100?'・件数が少なく参考程度':''})</li>`:'';
+  return `<h3>過去の値動きで試すとどうだったか</h3>
+  <div class="lead"><ul style="margin:0;padding-left:1.1em">${line('短期スコア50点以上',sh,'約1か月(20営業日)')}${line('トレンド点40点以上',tr,'約3か月(60営業日)')}</ul></div>
+  ${btTable('短期スコア → 5営業日後',b.short['5d'])}${btTable('短期スコア → 20営業日後',b.short['20d'])}
+  ${btTable('長期のトレンド点(50点満点) → 20営業日後',b.trend&&b.trend['20d'])}${btTable('長期のトレンド点(50点満点) → 60営業日後',b.trend&&b.trend['60d'])}
+  <h3>この表の見方と注意</h3><ul class="note"><li>期間 ${esc(b.period[0])}〜${esc(b.period[1])}、現在のS&P500のうち${b.tickers}銘柄で、過去の各日にスコアを再現しました。</li><li>「市場平均比」は、同じ日の全銘柄の平均リターンとの差です。プラスなら市場平均より良かったことになります。</li><li>株価だけで決まる部分(短期スコア・長期のトレンド点)だけを検証しています。財務とアナリスト評価は過去の値が残っていないため対象外です。</li><li>現在の構成銘柄だけで検証しているため、成績はやや良く出ます。期間も約1年と短く、相場の地合いに左右されます。将来の成績を保証するものではありません。</li></ul>`;
+}
+
+/* ---------- 個別銘柄の詳細 ---------- */
+function getCharts(){
+  if(window.__CHARTS__)return Promise.resolve(window.__CHARTS__);
+  if(!CH)CH=fetch('data/charts.json').then(r=>{if(!r.ok)throw 0;return r.json()});
+  return CH;
+}
+function drawChart(box,dates,ser){
+  const [c,a,b]=ser,all=[...c,...a,...b].filter(v=>v!=null);
+  if(!all.length){box.textContent='チャートデータなし';return}
+  const mn=Math.min(...all),mx=Math.max(...all),k=(mx-mn)||1,W=300,Hh=160,n=dates.length;
+  const path=arr=>{let d='',pen=false;arr.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+(i/(n-1)*W).toFixed(1)+' '+(Hh-4-(v-mn)/k*(Hh-8)).toFixed(1);pen=true});return d};
+  const ln=(arr,col,w,dash)=>`<path d="${path(arr)}" fill="none" stroke="${col}" stroke-width="${w}" ${dash?'stroke-dasharray="4 3"':''} vector-effect="non-scaling-stroke"/>`;
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" role="img" aria-label="直近1年の株価と移動平均線">${ln(b,'var(--mute)',1.5,1)}${ln(a,'var(--acc)',1.5)}${ln(c,'var(--ink)',1.8)}</svg><span class="ylab t">$${mx.toFixed(0)}</span><span class="ylab b">$${mn.toFixed(0)}</span>`;
+}
+const bar=(l,v,m)=>v==null?`<div class="br"><span>${l}</span><div class="bar"></div><b>-</b></div>`:`<div class="br"><span>${l}</span><div class="bar"><i style="width:${Math.max(0,Math.min(100,Math.round(v/m*100)))}%"></i></div><b>${v}/${m}</b></div>`;
+function openDetail(t){
+  const el=$('detail'),s=D.stocks.find(x=>x.t===t);
+  const head=`<div class="sbar"><button class="btn" id="dClose">‹ 戻る</button></div>`;
+  el.hidden=false;document.body.style.overflow='hidden';el.scrollTop=0;
+  if(!s){el.innerHTML=`<div class="in">${head}<div class="empty">この銘柄のデータがありません</div></div>`;return}
+  const ch=s.change||0,li=l=>(l||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
+  const vs=(a,b)=>a==null?'-':`$${a} <small class="${s.price>=a?'up':'dn'}">(${s.price>=a?'株価が上':'株価が下'})</small>`;
+  el.innerHTML=`<div class="in sh">${head}
+  <h2>${s.watch?'<span class="star">★</span> ':''}${esc(s.t)}</h2><div class="dim">${esc(s.name)}・${esc(s.sector)}</div>
+  <div style="font-size:24px;font-weight:700;margin-top:4px">$${esc(s.price)} <small class="${ch>=0?'up':'dn'}" style="font-size:16px">${ch>=0?'+':''}${(ch*100).toFixed(2)}%</small></div>
+  <div class="cbox" id="cbox"><span class="dim" style="position:absolute;left:8px;top:8px;font-size:14px">チャート読み込み中…</span></div>
+  <div class="lg"><span><i></i>終値(1年)</span><span><i class="a"></i>50日線</span><span><i class="b"></i>200日線</span></div>
+  ${(s.warns||[]).length?`<h3>注意サイン</h3><div class="chips" style="margin-top:0">${chips(s)}</div>`:''}
+  <h3>スコアの内訳</h3>${bar('長期トレンド',s.long_trend,50)}${bar('割安度・財務',s.long_fund,50)}${bar('アナリスト評価',s.long_analyst,20)}<div class="br"><span><b>長期 合計</b></span><div class="bar"><i style="width:${s.long||0}%"></i></div><b>${s.long??'-'}/100</b></div>${bar('短期',s.short,100)}
+  <h3>アナリスト</h3>${analyst(s)}
+  <h3>目安の数値</h3><div class="kv"><div><span>RSI</span><b>${esc(s.rsi)}</b></div><div><span>50日線</span><b>${vs(s.sma50)}</b></div><div><span>200日線</span><b>${vs(s.sma200)}</b></div></div>
+  <h3>長期の理由</h3><ul class="note">${li(s.long_reasons)}</ul><h3>短期の理由</h3><ul class="note">${li(s.short_reasons)}</ul>
+  <p style="margin-top:18px"><a href="https://finance.yahoo.com/quote/${encodeURIComponent(s.t)}" rel="noopener">Yahoo Finance で見る ›</a></p></div>`;
+  getCharts().then(c=>{const ser=c.s&&c.s[t];if(!ser)throw 0;drawChart($('cbox'),c.dates,ser);
+    const d=document.createElement('div');d.className='lg';d.style.justifyContent='space-between';d.innerHTML=`<span>${esc(c.dates[0])}</span><span>${esc(c.dates[c.dates.length-1])}</span>`;
+    $('cbox').after(d)}).catch(()=>{const b=$('cbox');if(b)b.innerHTML='<span class="dim" style="position:absolute;left:8px;top:8px;font-size:14px">チャートデータがありません</span>'});
+}
+function closeDetail(){$('detail').hidden=true;document.body.style.overflow=''}
+function go(t){pushed=true;location.hash='d-'+t}
+function route(){
+  const h=decodeURIComponent(location.hash.slice(1));
+  if(h.startsWith('d-')&&D)openDetail(h.slice(2));else{closeDetail()}
+}
+window.addEventListener('hashchange',route);
+
 function init(d){
   D=d;
   const t=d.generated_at?new Date(d.generated_at):null;
@@ -155,12 +316,20 @@ function init(d){
   $('kpis').innerHTML=`<div><b>${nl}</b><span>長期 買い候補</span></div><div><b>${ns}</b><span>短期 買いシグナル</span></div><div><b>${nw}</b><span>ウォッチで点灯</span></div>`;
   const secs=[...new Set(d.stocks.map(s=>s.sector).filter(Boolean))].sort();
   $('sector').innerHTML='<option value="">全セクター</option>'+secs.map(x=>`<option>${esc(x)}</option>`).join('');
-  render();drawDist();
+  loadH();render();drawDist();route();
 }
-$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;shown=30;try{history.replaceState(null,'','#'+view)}catch(_){}render()});
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;shown=30;armed=-1;try{history.replaceState(null,'','#'+view)}catch(_){}render()});
 $('q').addEventListener('input',()=>{shown=30;render()});
 $('sector').addEventListener('change',()=>{shown=30;render()});
 $('more').addEventListener('click',()=>{shown+=30;render()});
+document.addEventListener('click',e=>{
+  const t=e.target.closest('.top');if(t&&t.dataset.t){go(t.dataset.t);return}
+  if(e.target.id==='dClose'){if(pushed){pushed=false;history.back()}else{location.hash=view}return}
+  if(e.target.id==='hAdd'){holdAdd();return}
+  if(e.target.id==='hLoad'){holdLoad();return}
+  const d=e.target.closest('[data-del]');
+  if(d){const i=+d.dataset.del;if(armed===i){H.splice(i,1);armed=-1;saveH()}else armed=i;render()}
+});
 if(window.__DATA__)init(window.__DATA__);
 else fetch('data/signals.json',{cache:'no-store'}).then(r=>r.json()).then(init).catch(()=>{$('asof').textContent='データがまだありません(初回の自動実行後に表示されます)'});
 }

@@ -75,11 +75,20 @@ def run_demo():
                         "returnOnEquity": float(rng.uniform(0, 0.4)), "revenueGrowth": float(rng.uniform(-0.1, 0.3)),
                         "earningsGrowth": float(rng.uniform(-0.2, 0.4)), "debtToEquity": float(rng.uniform(10, 200)),
                         "profitMargins": float(rng.uniform(0, 0.3))}
-    cur = build(uni, ["VOO", "QQQ", "NVDA"], prices, funds)
+    cur, charts = build(uni, ["VOO", "QQQ", "NVDA"], prices, funds)
+    assert len(charts["s"]["AAPL"][0]) == len(charts["dates"]) == 252
     cur["demo"] = True
     json.dumps(cur)  # シリアライズ可能か
+    from signals import backtest
+    import time
+    t0 = time.time()
+    bt = backtest.run(prices)
+    print("backtest sec", round(time.time() - t0, 1), bt["period"], bt["short"]["20d"]["buckets"])
+    json.dumps(bt)
+    (OUT / "backtest.json").write_text(json.dumps(bt, ensure_ascii=False, separators=(",", ":")))
+    (OUT / "charts.json").write_text(json.dumps(charts, separators=(",", ":")))
     nl, ns = diff_new_signals(None, cur)
-    print(format_message(cur, nl, ns))
+    print(format_message(cur, None, nl, ns))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "signals.json").write_text(json.dumps(cur, ensure_ascii=False, separators=(",", ":")))
     print("long sig:", sum(s["long_sig"] for s in cur["stocks"]),
