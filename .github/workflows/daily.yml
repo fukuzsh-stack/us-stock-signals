@@ -39,7 +39,10 @@ jobs:
           git config user.email "signals-bot@users.noreply.github.com"
           git add docs/data cache
           git diff --cached --quiet || git commit -m "signals: $(date -u +%F)"
-          git push
+          # 途中で別の更新が入っていても、今回の結果を優先して取り込む
+          git fetch origin main
+          git rebase -X theirs origin/main
+          git push origin HEAD:main
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
