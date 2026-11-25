@@ -204,39 +204,120 @@ const ro=new ResizeObserver(drawDist);ro.observe($('dist'));
 
 
 /* ---------- 保有(このスマホ内だけに保存) ---------- */
+let editI=-1;
+const normT=t=>String(t||'').trim().toUpperCase().replace(/\./g,'-');
+const okT=t=>/^[A-Z0-9-]{1,10}$/.test(t);
+const num=x=>{const v=parseFloat(String(x).replace(/[,$\s株]/g,''));return isFinite(v)?v:NaN};
 function holdHTML(){
   const by=Object.fromEntries(D.stocks.map(s=>[s.t,s]));
   let tc=0,tv=0,miss=0;
   const items=H.map((h,i)=>{
     const s=by[h.t],cost=h.shares*h.cost;
     const del=`<button class="btn" data-del="${i}">${armed===i?'もう一度押して削除':'削除'}</button>`;
-    if(!s){miss++;return `<article class="card"><span class="tk">${esc(h.t)}</span><p class="dim" style="margin:6px 0">${esc(h.shares)}株・平均$${esc(h.cost)}。この銘柄は分析対象外です(watchlist.txt に追加すると表示されます)。</p><div class="acts">${del}</div></article>`}
+    const edit=editI===i?`<div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))"><input id="eS" value="${esc(h.shares)}" inputmode="decimal" aria-label="株数"><input id="eC" value="${esc(h.cost)}" inputmode="decimal" aria-label="平均取得単価"><button class="btn pri" data-save="${i}">保存</button><button class="btn" data-cancel="1" style="grid-column:auto">キャンセル</button></div><p class="note" style="margin:0">一部を売ったときは、株数を減らして保存します。</p>`
+      :`<div class="acts"><button class="btn" data-edit="${i}">編集</button>${del}</div>`;
+    if(!s){miss++;return `<article class="card"><span class="tk">${esc(h.t)}</span><p class="dim" style="margin:6px 0">${esc(h.shares)}株・平均$${esc(h.cost)}。この銘柄は分析対象外です(watchlist.txt に追加すると表示されます)。</p>${edit}</article>`}
     const v=h.shares*s.price,pl=v-cost;tc+=cost;tv+=v;
     const w=(s.warns||[]).length?`<div class="chips">${chips(s)}</div>`:'<p class="dim" style="margin:8px 0 0;font-size:14px">注意サインはありません</p>';
     return `<article class="card"><button class="top" data-t="${esc(s.t)}" aria-label="${esc(s.t)}の詳細を開く"><span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}</span><span class="chev">›</span></button>
-      <div class="row2"><span>${esc(h.shares)}株 × 平均$${esc(h.cost)}</span><span>評価額 <b>${usd(v)}</b></span><span class="${pl>=0?'up':'dn'}"><b>${pl>=0?'+':''}${usd(pl)}(${fmt(pl/cost,1)})</b></span></div>${w}<div class="acts">${del}</div></article>`;
+      <div class="row2"><span>${esc(h.shares)}株 × 平均$${esc(h.cost)}</span><span>評価額 <b>${usd(v)}</b></span><span class="${pl>=0?'up':'dn'}"><b>${pl>=0?'+':''}${usd(pl)}(${fmt(pl/cost,1)})</b></span></div>${w}${edit}</article>`;
   }).join('');
   const tot=tc?`<div class="lead">合計 評価額 <b>${usd(tv)}</b>・取得額 ${usd(tc)}・損益 <b class="${tv>=tc?'up':'dn'}">${tv>=tc?'+':''}${usd(tv-tc)}(${fmt((tv-tc)/tc,1)})</b>${miss?`<br><span class="dim">※分析対象外の${miss}銘柄は合計に含めていません</span>`:''}</div>`:'';
-  return `<h3>保有銘柄(米ドル)</h3><p class="note">入力した内容は<b>このスマホのブラウザ内だけ</b>に保存され、GitHubや外部には送られません。ブラウザのデータを消すと消えるので、下のバックアップを使ってください。「注意サイン」は売りの推奨ではなく、状況が変わった合図です。</p>
-  <div class="form"><input id="hT" placeholder="ティッカー(例 AAPL)" autocapitalize="characters" autocomplete="off"><input id="hS" placeholder="株数" inputmode="decimal"><input id="hC" placeholder="平均取得単価($)" inputmode="decimal"><button class="btn pri" id="hAdd">追加</button></div><div class="msg" id="hMsg" role="status"></div>
+  return `<h3>保有銘柄(米ドル)</h3><p class="note">入力した内容は<b>このスマホのブラウザ内だけ</b>に保存され、GitHubや外部には送られません。「注意サイン」は売りの推奨ではなく、状況が変わった合図です。</p>
+  <div class="form"><input id="hT" placeholder="ティッカー(例 AAPL)" autocapitalize="characters" autocomplete="off"><input id="hS" placeholder="買った株数" inputmode="decimal"><input id="hC" placeholder="買値($)" inputmode="decimal"><button class="btn pri" id="hAdd">買い増しとして追加</button></div><div class="msg" id="hMsg" role="status"></div>
   ${tot}<div class="list">${items||'<div class="empty">まだ登録がありません</div>'}</div>
-  <details><summary>バックアップ(書き出し・読み込み)</summary><textarea id="hBk" aria-label="バックアップ用テキスト">${esc(JSON.stringify(H))}</textarea><div class="acts"><button class="btn" id="hLoad">このテキストを読み込む</button></div><p class="note">別のスマホに移すときも、このテキストをコピーして読み込みます。</p></details>`;
+  <details><summary>まとめて入力・証券会社のCSV取り込み</summary>
+    <h3>まとめて貼り付け</h3><p class="note">1行に「ティッカー 株数 平均取得単価」。同じ銘柄は上書きされます。</p><textarea id="hBulk" placeholder="AMZN 10 180.5&#10;AMD 5 120&#10;BRK-B 3 450" aria-label="まとめて入力"></textarea><div class="acts"><button class="btn pri" id="hBulkGo">この内容で登録</button></div>
+    <h3>SBI証券のCSVを読み込む</h3><p class="note">外国株式の「保有証券一覧」などのCSVを選びます。読み込むと、CSVにある銘柄の株数と平均取得単価が上書きされます(CSVにない銘柄はそのまま)。ファイルはこのスマホの中で処理され、外部には送られません。</p><input type="file" id="hFile" accept=".csv,text/csv,text/plain" aria-label="CSVファイル">
+  </details>
+  <details><summary>バックアップ(書き出し・読み込み)</summary><textarea id="hBk" aria-label="バックアップ用テキスト">${esc(JSON.stringify(H))}</textarea><div class="acts"><button class="btn" id="hCopy">コピー</button><button class="btn" id="hLoad">このテキストを読み込む</button></div><p class="note">別のスマホに移すときや、念のための控えに使います。</p></details>`;
+}
+function msg(t){const m=$('hMsg');if(m)m.textContent=t}
+function upsert(list){
+  let n=0;for(const x of list){const o=H.find(h=>h.t===x.t);if(o){o.shares=x.shares;o.cost=x.cost}else H.push({t:x.t,shares:x.shares,cost:x.cost});n++}
+  saveH();return n;
 }
 function holdAdd(){
-  const t=$('hT').value.trim().toUpperCase().replace('.','-'),sh=parseFloat($('hS').value),c=parseFloat($('hC').value),m=$('hMsg');
-  if(!/^[A-Z0-9-]{1,10}$/.test(t)){m.textContent='ティッカーは英数字で入力してください(例 AAPL)';return}
-  if(!(sh>0)||!(c>0)){m.textContent='株数と取得単価は0より大きい数字で入力してください';return}
+  const t=normT($('hT').value),sh=num($('hS').value),c=num($('hC').value);
+  if(!okT(t)){msg('ティッカーは英数字で入力してください(例 AAPL)');return}
+  if(!(sh>0)||!(c>0)){msg('株数と買値は0より大きい数字で入力してください');return}
   const o=H.find(h=>h.t===t);
   if(o){const n=o.shares+sh;o.cost=Math.round((o.shares*o.cost+sh*c)/n*100)/100;o.shares=n}
   else H.push({t,shares:sh,cost:c});
   saveH();render();
 }
+function holdSave(i){
+  const sh=num($('eS').value),c=num($('eC').value);
+  if(!(c>0)||!(sh>=0)){return}
+  if(sh===0)H.splice(i,1);else{H[i].shares=sh;H[i].cost=c}
+  editI=-1;saveH();render();
+}
+function holdBulk(){
+  const list=[],bad=[];
+  for(const line of $('hBulk').value.split(/\r?\n/)){
+    if(!line.trim())continue;
+    const p=line.trim().split(/[\s,\t]+/),t=normT(p[0]),sh=num(p[1]),c=num(p[2]);
+    if(okT(t)&&sh>0&&c>0)list.push({t,shares:sh,cost:c});else bad.push(line.trim());
+  }
+  const n=upsert(list);render();
+  msg(n+'銘柄を登録しました'+(bad.length?`。読み取れなかった行: ${bad.slice(0,3).join(' / ')}`:''));
+}
+function parseCSV(text){
+  const sep=(text.split('\n')[0].match(/\t/g)||[]).length>(text.split('\n')[0].match(/,/g)||[]).length?'\t':',';
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===sep){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}
+    else f+=c}
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+function importCSV(text){
+  const rows=parseCSV(text);
+  const find=(hd,inc,exc)=>{for(const k of inc){const i=hd.findIndex(h=>h.includes(k)&&!(exc||[]).some(e=>h.includes(e)));if(i>=0)return i}return -1};
+  let hi=-1,ci={};
+  for(let r=0;r<Math.min(rows.length,40);r++){
+    const hd=rows[r].map(x=>x.trim());
+    const t=find(hd,['ティッカー','銘柄コード','シンボル','Symbol','ticker','コード']);
+    const q=find(hd,['保有数量','保有株数','残高数量','数量','株数']);
+    if(t>=0&&q>=0){hi=r;ci={t,q,c:find(hd,['平均取得','取得単価','平均単価','単価'],['円','JPY']),jpy:find(hd,['平均取得','取得単価','平均単価','単価'])};break}
+  }
+  if(hi<0)return {err:'ティッカーと数量の列が見つかりませんでした。保有証券の一覧CSVを選んでいるか確認してください。'};
+  if(ci.c<0)return {err:ci.jpy>=0?'取得単価が円建ての列しか見つかりませんでした。米ドル建ての単価がある一覧をお試しください。':'平均取得単価の列が見つかりませんでした。'};
+  const list=[],skip=[];
+  for(const r of rows.slice(hi+1)){
+    const t=normT(r[ci.t]),sh=num(r[ci.q]),c=num(r[ci.c]);
+    if(okT(t)&&sh>0&&c>0)list.push({t,shares:sh,cost:c});else if(r[ci.t]&&r[ci.t].trim())skip.push(r[ci.t].trim());
+  }
+  return {list,skip};
+}
+function holdFile(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const buf=rd.result;let text;
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){try{text=new TextDecoder('shift_jis').decode(buf)}catch(e2){msg('ファイルを読めませんでした');return}}
+    const r=importCSV(text);
+    if(r.err){msg(r.err);return}
+    if(!r.list.length){msg('取り込める銘柄がありませんでした');return}
+    const n=upsert(r.list);render();
+    msg(`${n}銘柄を取り込みました(${r.list.map(x=>x.t).join('、')})`+(r.skip.length?`。対象外の行 ${r.skip.length}件`:''));
+  };
+  rd.onerror=()=>msg('ファイルを読めませんでした');
+  rd.readAsArrayBuffer(file);
+}
 function holdLoad(){
   try{const a=JSON.parse($('hBk').value);
     if(!Array.isArray(a))throw 0;
-    const ok=a.filter(h=>h&&/^[A-Z0-9-]{1,10}$/.test(h.t)&&h.shares>0&&h.cost>0).map(h=>({t:h.t,shares:+h.shares,cost:+h.cost}));
-    H=ok;saveH();render();$('hMsg').textContent=ok.length+'件を読み込みました'
-  }catch(e){$('hMsg').textContent='読み込めませんでした。書き出したテキストをそのまま貼ってください'}
+    const ok=a.filter(h=>h&&okT(h.t)&&h.shares>0&&h.cost>0).map(h=>({t:h.t,shares:+h.shares,cost:+h.cost}));
+    H=ok;saveH();render();msg(ok.length+'件を読み込みました')
+  }catch(e){msg('読み込めませんでした。書き出したテキストをそのまま貼ってください')}
+}
+function holdCopy(){
+  const ta=$('hBk');ta.select();
+  const done=()=>msg('コピーしました。メモ帳などに貼って控えてください');
+  try{navigator.clipboard.writeText(ta.value).then(done,()=>{document.execCommand&&document.execCommand('copy');done()})}catch(e){try{document.execCommand('copy');done()}catch(_){msg('テキストを長押ししてコピーしてください')}}
 }
 
 /* ---------- 検証 ---------- */
@@ -318,15 +399,21 @@ function init(d){
   $('sector').innerHTML='<option value="">全セクター</option>'+secs.map(x=>`<option>${esc(x)}</option>`).join('');
   loadH();render();drawDist();route();
 }
-$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;shown=30;armed=-1;try{history.replaceState(null,'','#'+view)}catch(_){}render()});
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;shown=30;armed=-1;editI=-1;try{history.replaceState(null,'','#'+view)}catch(_){}render()});
 $('q').addEventListener('input',()=>{shown=30;render()});
 $('sector').addEventListener('change',()=>{shown=30;render()});
 $('more').addEventListener('click',()=>{shown+=30;render()});
+document.addEventListener('change',e=>{if(e.target.id==='hFile'&&e.target.files[0])holdFile(e.target.files[0])});
 document.addEventListener('click',e=>{
   const t=e.target.closest('.top');if(t&&t.dataset.t){go(t.dataset.t);return}
   if(e.target.id==='dClose'){if(pushed){pushed=false;history.back()}else{location.hash=view}return}
   if(e.target.id==='hAdd'){holdAdd();return}
   if(e.target.id==='hLoad'){holdLoad();return}
+  if(e.target.id==='hBulkGo'){holdBulk();return}
+  if(e.target.id==='hCopy'){holdCopy();return}
+  const ed=e.target.closest('[data-edit]');if(ed){editI=+ed.dataset.edit;armed=-1;render();return}
+  const sv=e.target.closest('[data-save]');if(sv){holdSave(+sv.dataset.save);return}
+  if(e.target.closest('[data-cancel]')){editI=-1;render();return}
   const d=e.target.closest('[data-del]');
   if(d){const i=+d.dataset.del;if(armed===i){H.splice(i,1);armed=-1;saveH()}else armed=i;render()}
 });
