@@ -19,8 +19,6 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment:
-      name: github-pages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,8 +41,18 @@ jobs:
           git fetch origin main
           git rebase -X theirs origin/main
           git push origin HEAD:main
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
-      - uses: actions/deploy-pages@v4
+
+  # 公開だけが失敗した場合も、この job だけをやり直せるよう分けている
+  deploy:
+    needs: run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.d.outputs.page_url }}
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
