@@ -151,6 +151,17 @@ def run():
     except Exception as e:  # noqa: BLE001
         print(f"[warn] backtest failed: {e}")
 
+    # 週1回の長期検証(10年分)。時間がかかるので BACKTEST_FULL=true のときだけ
+    if os.environ.get("BACKTEST_FULL") == "true":
+        try:
+            long_prices = data.download_prices(sorted(universe["t"]), "10y")
+            print(f"10y prices ok: {len(long_prices)}")
+            bl = backtest.run_long(long_prices)
+            (OUT / "backtest_long.json").write_text(json.dumps(bl, ensure_ascii=False, separators=(",", ":")))
+            print("long backtest period:", bl.get("period"))
+        except Exception as e:  # noqa: BLE001
+            print(f"[warn] long backtest failed: {e}")
+
     new_l, new_s = diff_new_signals(prev, cur)
     msg = format_message(cur, prev, new_l, new_s)
     print(msg or "(通知する内容なし)")

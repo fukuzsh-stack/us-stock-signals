@@ -324,12 +324,26 @@ function holdCopy(){
 function showTest(){
   const P=$('panel');P.innerHTML='<div class="empty">読み込み中…</div>';
   const get=window.__BT__?Promise.resolve(window.__BT__):BT?Promise.resolve(BT):fetch('data/backtest.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()});
-  get.then(b=>{BT=b;if(view==='test')P.innerHTML=testHTML(b)}).catch(()=>{if(view==='test')P.innerHTML='<div class="empty">検証データがまだありません(次の自動実行後に表示されます)</div>'});
+  const getL=window.__BTL__?Promise.resolve(window.__BTL__):fetch('data/backtest_long.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  Promise.all([get,getL]).then(([b,l])=>{BT=b;if(view==='test')P.innerHTML=testHTML(b)+longHTML(l)}).catch(()=>{if(view==='test')P.innerHTML='<div class="empty">検証データがまだありません(次の自動実行後に表示されます)</div>'});
+}
+function longHTML(l){
+  const head='<h2 style="font-size:20px;margin:30px 0 4px">長期の検証(10年)</h2>';
+  if(!l||!l.trend)return head+'<p class="note">毎週金曜の自動実行(または手動実行)で更新されます。まだ結果がありません。</p>';
+  const topP=l.pct&&l.pct['120d']&&l.pct['120d'].buckets[0],top40=l.trend['250d']&&l.trend['250d'].buckets[2];
+  const line=(name,x,days)=>x&&x.win!=null?`<li>${name}の銘柄を買った場合、${days}で市場平均に対して <b class="${x.excess>=0?'up':'dn'}">${fmt(x.excess,1)}</b>、プラスで終わった割合は <b>${(x.win*100).toFixed(0)}%</b>(${x.n.toLocaleString()}件)</li>`:'';
+  const yr=l.by_year?Object.keys(l.by_year).sort().map(y=>{const x=l.by_year[y];return x.win==null?`<tr><td>${esc(y)}</td><td>${x.n}</td><td colspan="3" class="dim" style="text-align:left">件数不足</td></tr>`:`<tr><td>${esc(y)}</td><td>${x.n.toLocaleString()}</td><td>${(x.win*100).toFixed(0)}%</td><td>${fmt(x.mean,1)}</td><td class="${x.excess>=0?'up':'dn'}">${fmt(x.excess,1)}</td></tr>`}).join(''):'';
+  return head+`<p class="note">過去${esc(l.period[0])}〜${esc(l.period[1])}の約10年分で、トレンド点(株価だけで決まる部分)を検証しています。毎週更新。</p>
+  <div class="lead"><ul style="margin:0;padding-left:1.1em">${line('その日のトレンド点が上位10%',topP,'約6か月(120営業日)')}${line('トレンド点40点以上',top40,'約1年(250営業日)')}</ul></div>
+  ${btTable('トレンド点 → 60営業日後(約3か月)',l.trend['60d'])}${btTable('トレンド点 → 120営業日後(約6か月)',l.trend['120d'])}${btTable('トレンド点 → 250営業日後(約1年)',l.trend['250d'])}
+  ${btTable('「その日の順位」で区切る → 120営業日後',l.pct&&l.pct['120d'])}
+  ${yr?`<h3>年ごとの成績(トレンド点40点以上・120営業日後)</h3><div class="scroll"><table><thead><tr><th>年</th><th>件数</th><th>勝率</th><th>平均</th><th>市場平均比</th></tr></thead><tbody>${yr}</tbody></table></div>`:''}
+  <ul class="note"><li>現在のS&P500の構成銘柄だけで検証しているため、10年前から今まで生き残った強い銘柄ばかりが対象です。成績は実際より良く出ます(市場平均比はある程度打ち消しますが、完全ではありません)。</li><li>財務とアナリスト評価は、過去の時点の値が手に入らないため検証できません。長期スコアのこの部分は、効果が確かめられていません。</li></ul>`;
 }
 function btTable(title,o){
   if(!o)return '';
   const rows=o.buckets.map(b=>b.win==null?`<tr><td>${esc(b.label)}</td><td>${b.n}</td><td colspan="3" class="dim" style="text-align:left">件数不足</td></tr>`:`<tr><td>${esc(b.label)}</td><td>${b.n.toLocaleString()}</td><td>${(b.win*100).toFixed(0)}%</td><td>${fmt(b.mean,1)}</td><td class="${b.excess>=0?'up':'dn'}">${fmt(b.excess,1)}</td></tr>`).join('');
-  return `<h3>${title}</h3><div class="scroll"><table><thead><tr><th>点数</th><th>件数</th><th>勝率</th><th>平均</th><th>市場平均比</th></tr></thead><tbody>${rows}<tr class="base"><td>全体</td><td>${o.all.n.toLocaleString()}</td><td>${(o.all.win*100).toFixed(0)}%</td><td>${fmt(o.all.mean,1)}</td><td>-</td></tr></tbody></table></div>`;
+  return `<h3>${title}</h3><div class="scroll"><table><thead><tr><th>点数</th><th>件数</th><th>勝率</th><th>平均</th><th>市場平均比</th></tr></thead><tbody>${rows}${o.all?`<tr class="base"><td>全体</td><td>${o.all.n.toLocaleString()}</td><td>${(o.all.win*100).toFixed(0)}%</td><td>${fmt(o.all.mean,1)}</td><td>-</td></tr>`:''}</tbody></table></div>`;
 }
 function testHTML(b){
   if(!b.short)return '<div class="empty">検証データがありません</div>';
