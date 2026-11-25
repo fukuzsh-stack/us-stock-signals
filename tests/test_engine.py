@@ -6,7 +6,7 @@ import pandas as pd
 
 from signals.indicators import add_indicators, rsi
 from signals.main import OUT, build, diff_new_signals, format_message
-from signals.scoring import fundamental_score, short_score
+from signals.scoring import analyst_score, fundamental_score, score_ticker, short_score
 
 
 def synth(seed, drift, vol=0.015, n=504, shock=None, vol_spike=False):
@@ -37,6 +37,20 @@ def test_fundamentals():
     assert fundamental_score(good)[0] == 50
     assert fundamental_score({})[0] is None
     assert fundamental_score({"forwardPE": float("nan")})[0] == 0
+
+
+def test_analyst():
+    f = {"numberOfAnalystOpinions": 30, "recommendationMean": 1.6, "recommendationKey": "strong_buy",
+         "targetMeanPrice": 130}
+    pts, rs, info = analyst_score(f, 100)
+    assert pts == 20 and info["upside"] == 0.3 and rs
+    assert analyst_score({"numberOfAnalystOpinions": 3, "recommendationMean": 1.2}, 100)[0] is None
+    assert analyst_score({}, 100)[0] is None
+    # 項目が欠けても 100点満点に換算される
+    df = add_indicators(synth(3, 0.001))
+    full = score_ticker(df, {"forwardPE": 10, "returnOnEquity": 0.3, **f})
+    assert 0 <= full["long"] <= 100 and full["analyst"]["n_analysts"] == 30
+    assert score_ticker(df, None)["analyst"] is None
 
 
 def test_short_rebound():
@@ -73,6 +87,6 @@ def run_demo():
 
 
 if __name__ == "__main__":
-    test_rsi_bounds(); test_fundamentals(); test_short_rebound()
+    test_rsi_bounds(); test_fundamentals(); test_analyst(); test_short_rebound()
     print("unit tests OK")
     run_demo()

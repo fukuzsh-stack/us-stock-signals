@@ -102,6 +102,45 @@ def fundamental_score(f: dict):
     return pts, reasons
 
 
+def analyst_score(f: dict, price: float):
+    """アナリスト評価(20点満点)。推奨平均(1=強い買い〜5=売り)10点 + 目標株価までの上昇余地10点。
+    アナリストが5人未満の銘柄は信頼性が低いので評価しない。"""
+    n = f.get("numberOfAnalystOpinions") if f else None
+    if not _ok(n) or n < 5:
+        return None, [], {}
+    pts, reasons = 0, []
+    rec = f.get("recommendationMean")
+    if _ok(rec):
+        label = {"strong_buy": "強い買い", "buy": "買い", "hold": "中立", "underperform": "弱気",
+                 "sell": "売り"}.get(f.get("recommendationKey"), "")
+        if rec <= 1.8:
+            pts += 10; reasons.append(f"アナリスト評価 {rec:.1f}/5・{label}(強気・{int(n)}人)")
+        elif rec <= 2.3:
+            pts += 7; reasons.append(f"アナリスト評価 {rec:.1f}/5・{label}({int(n)}人)")
+        elif rec <= 2.8:
+            pts += 3
+    tgt = f.get("targetMeanPrice")
+    upside = None
+    if _ok(tgt) and price > 0:
+        upside = tgt / price - 1
+        if upside > 0.25:
+            pts += 10; reasons.append(f"目標株価 ${tgt:.0f}(上昇余地 {upside:+.0%})")
+        elif upside > 0.15:
+            pts += 7; reasons.append(f"目標株価 ${tgt:.0f}(上昇余地 {upside:+.0%})")
+        elif upside > 0.05:
+            pts += 3
+        elif upside < 0:
+            reasons.append(f"株価が目標株価 ${tgt:.0f} を上回っている({upside:+.0%})")
+    info = {
+        "rec": round(float(rec), 2) if _ok(rec) else None,
+        "rec_key": f.get("recommendationKey"),
+        "n_analysts": int(n),
+        "target": round(float(tgt), 2) if _ok(tgt) else None,
+        "upside": round(float(upside), 3) if upside is not None else None,
+    }
+    return pts, reasons, info
+
+
 def short_score(df: pd.DataFrame):
     if len(df) < 60:
         return 0, []
@@ -147,14 +186,16 @@ def short_score(df: pd.DataFrame):
 def score_ticker(df: pd.DataFrame, fund: dict | None):
     t_pts, t_rs = long_trend_score(df)
     f_pts, f_rs = fundamental_score(fund or {})
-    if t_pts is None and f_pts is None:
+    price = float(df.iloc[-1]["Close"])
+    a_pts, a_rs, a_info = analyst_score(fund or {}, price)
+    # 取得できた項目だけで満点を計算し、100点に換算(トレンド50・財務50・アナリスト20)
+    parts = [(t_pts, 50), (f_pts, 50), (a_pts, 20)]
+    earned = sum(p for p, _ in parts if p is not None)
+    avail = sum(m for p, m in parts if p is not None)
+    if avail == 0:
         long_pts = None
-    elif f_pts is None:
-        long_pts = round(t_pts * 2 * CFG["no_fundamental_penalty"])  # 財務なしは割引
-    elif t_pts is None:
-        long_pts = round(f_pts * 2 * CFG["no_fundamental_penalty"])
     else:
-        long_pts = t_pts + f_pts
+        long_pts = round(earned / avail * 100 * (1 if f_pts is not None else CFG["no_fundamental_penalty"]))
     s_pts, s_rs = short_score(df)
     last = df.iloc[-1]
     chg = last["Close"] / df["Close"].iloc[-2] - 1 if len(df) > 1 else 0.0
@@ -162,7 +203,9 @@ def score_ticker(df: pd.DataFrame, fund: dict | None):
         "long": long_pts,
         "long_trend": t_pts,
         "long_fund": f_pts,
-        "long_reasons": t_rs + f_rs,
+        "long_reasons": t_rs + f_rs + a_rs,
+        "long_analyst": a_pts,
+        "analyst": a_info or None,
         "short": s_pts,
         "short_reasons": s_rs,
         "price": round(float(last["Close"]), 2),

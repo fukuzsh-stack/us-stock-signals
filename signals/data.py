@@ -75,6 +75,8 @@ FUND_KEYS = [
     "forwardPE", "trailingPE", "pegRatio", "trailingPegRatio", "returnOnEquity",
     "revenueGrowth", "earningsGrowth", "debtToEquity", "profitMargins",
     "shortName", "sector",
+    "recommendationMean", "recommendationKey", "numberOfAnalystOpinions",
+    "targetMeanPrice", "targetHighPrice", "targetLowPrice",
 ]
 
 
@@ -85,7 +87,12 @@ def load_fundamentals(tickers: list[str], refresh_days: int, max_per_run: int = 
     path = CACHE / "fundamentals.json"
     cache = json.loads(path.read_text()) if path.exists() else {}
     now = time.time()
-    stale = [t for t in tickers if now - cache.get(t, {}).get("_ts", 0) > refresh_days * 86400]
+    # 期限切れ、または新しい項目(アナリスト評価など)がまだ無い銘柄は再取得
+    stale = [
+        t for t in tickers
+        if now - cache.get(t, {}).get("_ts", 0) > refresh_days * 86400
+        or "targetMeanPrice" not in cache.get(t, {})
+    ]
     stale.sort(key=lambda t: cache.get(t, {}).get("_ts", 0))
     for t in stale[:max_per_run]:
         try:

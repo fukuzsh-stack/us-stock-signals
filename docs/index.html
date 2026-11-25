@@ -48,6 +48,8 @@ h1{font-size:clamp(30px,6vw,44px);line-height:1.05;margin:0 0 6px;font-weight:70
 .m b{color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;font-size:15px}
 .m b.on{color:var(--acc)}
 .spark{width:120px;height:40px}
+.an{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:14px;padding-top:8px;border-top:1px dashed var(--line)}
+.an small{color:var(--mute);margin-left:4px}.an .px,.an span{white-space:nowrap}.dim{color:var(--mute)}
 details{margin-top:8px;font-size:14px}summary{cursor:pointer;color:var(--mute);min-height:32px;display:flex;align-items:center}
 details ul{margin:4px 0 0;padding-left:1.2em}details h4{margin:8px 0 0;font-size:13px;color:var(--mute);font-weight:500}
 .empty{padding:28px;text-align:center;color:var(--mute);background:var(--card);border-radius:12px}
@@ -78,7 +80,7 @@ footer{margin-top:28px;font-size:13px;color:var(--mute);line-height:1.7}
   <div class="list" id="list"></div>
   <button class="more" id="more" hidden>さらに表示</button>
   <footer>
-    <p><b>スコアの中身</b>　長期(100点)=長期トレンド50点(200日線・50日線・1年モメンタム・押し目)+割安度・財務50点(PER・PEG・ROE・成長率・負債・利益率)。短期(100点)=RSI反発25・MACDクロス20・ボリンジャー回復20・出来高急増20・200日線より上15。</p>
+    <p><b>スコアの中身</b>　長期(100点)=長期トレンド50点(200日線・50日線・1年モメンタム・押し目)+割安度・財務50点(PER・PEG・ROE・成長率・負債・利益率)+アナリスト評価20点(推奨平均・目標株価までの上昇余地。5人未満は対象外)。取れた項目だけで100点に換算します。短期(100点)=RSI反発25・MACDクロス20・ボリンジャー回復20・出来高急増20・200日線より上15。</p>
     <p>データ: Yahoo Finance(yfinance経由、終値ベース)。本ページは機械的なスクリーニング結果であり、投資助言・売買の推奨ではありません。投資判断はご自身の責任で行ってください。</p>
   </footer>
 </div>
@@ -109,13 +111,20 @@ function meter(label,v,thr){
   const val=v==null?'-':v,on=v!=null&&v>=thr;
   return `<div class="m"><span>${label}</span><div class="scale"><div class="thr" style="left:${thr}%"></div>${v==null?'':`<div class="needle" style="left:${Math.max(0,Math.min(100,v))}%"></div>`}</div><b class="${on?'on':''}">${val}</b></div>`;
 }
+function analyst(s){
+  const a=s.analyst;
+  if(!a)return '<div class="an dim">アナリスト評価: データなし</div>';
+  const lab={strong_buy:'強い買い',buy:'買い',hold:'中立',underperform:'弱気',sell:'売り'}[a.rec_key]||'';
+  const up=a.upside==null?'':`<span class="${a.upside>=0?'up':'dn'}">${a.upside>=0?'+':''}${(a.upside*100).toFixed(0)}%</span>`;
+  return `<div class="an"><span>アナリスト <b>${esc(lab)}</b> ${a.rec==null?'':esc(a.rec.toFixed(1))+'/5'}<small>(${esc(a.n_analysts)}人)</small></span><span>目標 $${esc(a.target??'-')} ${up}</span></div>`;
+}
 function card(s){
   const ch=s.change||0,cls=ch>=0?'up':'dn';
   const lr=(s.long_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
   const sr=(s.short_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
   return `<article class="card"><div class="top">${s.watch?'<span class="star" aria-label="ウォッチリスト">★</span>':''}<span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}<small class="${cls}">${ch>=0?'+':''}${esc((ch*100).toFixed(2))}%</small></span></div>
   <div class="meters"><div>${meter('長期',s.long,D.thresholds.long)}${meter('短期',s.short,D.thresholds.short)}</div>${spark(s.spark)}</div>
-  <details><summary>理由を見る(RSI ${esc(s.rsi)}・${esc(s.sector)})</summary><h4>長期</h4><ul>${lr}</ul><h4>短期</h4><ul>${sr}</ul></details></article>`;
+  ${analyst(s)}<details><summary>理由を見る(RSI ${esc(s.rsi)}・${esc(s.sector)})</summary><h4>長期</h4><ul>${lr}</ul><h4>短期</h4><ul>${sr}</ul></details></article>`;
 }
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
