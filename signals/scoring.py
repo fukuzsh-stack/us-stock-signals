@@ -1,0 +1,172 @@
+"""長期・短期スコアの計算。点数と「理由」を日本語で返す。
+
+長期スコア(100点) = 長期トレンド(50) + 割安度・財務(50)
+短期スコア(100点) = RSI(25) + MACD(20) + ボリンジャー(20) + 出来高(20) + 上昇トレンド中か(15)
+しきい値・配点は config.py で調整できる。
+"""
+import math
+
+import pandas as pd
+
+from .config import CFG
+
+
+def _ok(x):
+    return x is not None and not (isinstance(x, float) and math.isnan(x))
+
+
+def long_trend_score(df: pd.DataFrame):
+    last = df.iloc[-1]
+    pts, reasons = 0, []
+    c, s50, s200 = last["Close"], last["sma50"], last["sma200"]
+    if not _ok(s200):
+        return None, ["データ期間が短く長期トレンド判定不可"]
+    if c > s200:
+        pts += 12
+        reasons.append("株価が200日線より上(長期上昇トレンド)")
+    if _ok(s50) and s50 > s200:
+        pts += 10
+        reasons.append("50日線が200日線より上")
+    s200_prev = df["sma200"].iloc[-21] if len(df) > 221 else float("nan")
+    if _ok(s200_prev) and s200 > s200_prev:
+        pts += 8
+        reasons.append("200日線が上向き")
+    if len(df) > 252:
+        mom = df["Close"].iloc[-22] / df["Close"].iloc[-253] - 1
+        if mom > 0.15:
+            pts += 10
+            reasons.append(f"過去1年の上昇率 {mom:+.0%}(強いモメンタム)")
+        elif mom > 0:
+            pts += 5
+            reasons.append(f"過去1年の上昇率 {mom:+.0%}")
+    hi = last["high252"]
+    if _ok(hi) and hi > 0:
+        dd = 1 - c / hi
+        if c > s200 and 0.05 <= dd <= 0.25:
+            pts += 10
+            reasons.append(f"上昇トレンド中の押し目(高値から -{dd:.0%})")
+        elif dd < 0.05:
+            pts += 5
+            reasons.append("52週高値圏")
+    return pts, reasons
+
+
+def fundamental_score(f: dict):
+    if not f:
+        return None, ["財務データなし"]
+    pts, reasons = 0, []
+    pe = f.get("forwardPE") or f.get("trailingPE")
+    if _ok(pe) and pe > 0:
+        if pe < 15:
+            pts += 10; reasons.append(f"PER {pe:.1f}倍(割安)")
+        elif pe < 25:
+            pts += 7; reasons.append(f"PER {pe:.1f}倍(妥当)")
+        elif pe < 35:
+            pts += 3
+    peg = f.get("pegRatio") or f.get("trailingPegRatio")
+    if _ok(peg) and peg > 0:
+        if peg < 1:
+            pts += 8; reasons.append(f"PEG {peg:.2f}(成長の割に割安)")
+        elif peg < 2:
+            pts += 4
+    roe = f.get("returnOnEquity")
+    if _ok(roe):
+        if roe > 0.20:
+            pts += 8; reasons.append(f"ROE {roe:.0%}(高収益)")
+        elif roe > 0.12:
+            pts += 5
+    rg = f.get("revenueGrowth")
+    if _ok(rg):
+        if rg > 0.10:
+            pts += 8; reasons.append(f"売上成長 {rg:+.0%}")
+        elif rg > 0:
+            pts += 4
+    eg = f.get("earningsGrowth")
+    if _ok(eg):
+        if eg > 0.10:
+            pts += 6; reasons.append(f"利益成長 {eg:+.0%}")
+        elif eg > 0:
+            pts += 3
+    de = f.get("debtToEquity")  # Yahoo は % 表記
+    if _ok(de):
+        if de < 50:
+            pts += 5; reasons.append("負債が少ない")
+        elif de < 100:
+            pts += 3
+    pm = f.get("profitMargins")
+    if _ok(pm):
+        if pm > 0.15:
+            pts += 5; reasons.append(f"利益率 {pm:.0%}")
+        elif pm > 0.05:
+            pts += 2
+    return pts, reasons
+
+
+def short_score(df: pd.DataFrame):
+    if len(df) < 60:
+        return 0, []
+    last, prev = df.iloc[-1], df.iloc[-2]
+    w = df.iloc[-6:]  # 直近5営業日+今日
+    pts, reasons = 0, []
+
+    r = last["rsi"]
+    if (w["rsi"].iloc[:-1] < 30).any() and r > prev["rsi"] and r >= 30:
+        pts += 25; reasons.append(f"RSIが売られすぎ(30未満)から反発 → {r:.0f}")
+    elif r < 30:
+        pts += 15; reasons.append(f"RSI {r:.0f}(売られすぎ)")
+    elif r < 40 and r > prev["rsi"]:
+        pts += 8; reasons.append(f"RSI {r:.0f}で上向き")
+
+    h = df["macd_hist"]
+    crossed = any(h.iloc[-i] > 0 and h.iloc[-i - 1] <= 0 for i in range(1, 4))
+    if crossed:
+        pts += 20; reasons.append("MACDゴールデンクロス(直近3日)")
+    elif h.iloc[-1] < 0 and h.iloc[-1] > h.iloc[-2] > h.iloc[-3] > h.iloc[-4]:
+        pts += 8; reasons.append("MACDが好転中(クロス目前)")
+
+    below = (w["Close"].iloc[:-1] < w["bb_lo"].iloc[:-1]).any()
+    if below and last["Close"] > last["bb_lo"]:
+        pts += 20; reasons.append("ボリンジャー下限割れから回復")
+    elif last["Close"] < last["bb_lo"]:
+        pts += 10; reasons.append("ボリンジャー下限を下回る(行き過ぎ)")
+
+    v20 = last["vol20"]
+    up = last["Close"] > prev["Close"]
+    if _ok(v20) and v20 > 0 and up:
+        ratio = last["Volume"] / v20
+        if ratio >= 2:
+            pts += 20; reasons.append(f"出来高急増 {ratio:.1f}倍で上昇")
+        elif ratio >= 1.5:
+            pts += 10; reasons.append(f"出来高増 {ratio:.1f}倍で上昇")
+
+    if _ok(last["sma200"]) and last["Close"] > last["sma200"]:
+        pts += 15; reasons.append("200日線より上(下落トレンドではない)")
+    return pts, reasons
+
+
+def score_ticker(df: pd.DataFrame, fund: dict | None):
+    t_pts, t_rs = long_trend_score(df)
+    f_pts, f_rs = fundamental_score(fund or {})
+    if t_pts is None and f_pts is None:
+        long_pts = None
+    elif f_pts is None:
+        long_pts = round(t_pts * 2 * CFG["no_fundamental_penalty"])  # 財務なしは割引
+    elif t_pts is None:
+        long_pts = round(f_pts * 2 * CFG["no_fundamental_penalty"])
+    else:
+        long_pts = t_pts + f_pts
+    s_pts, s_rs = short_score(df)
+    last = df.iloc[-1]
+    chg = last["Close"] / df["Close"].iloc[-2] - 1 if len(df) > 1 else 0.0
+    return {
+        "long": long_pts,
+        "long_trend": t_pts,
+        "long_fund": f_pts,
+        "long_reasons": t_rs + f_rs,
+        "short": s_pts,
+        "short_reasons": s_rs,
+        "price": round(float(last["Close"]), 2),
+        "change": round(float(chg), 4),
+        "rsi": round(float(last["rsi"]), 1),
+        "spark": [round(float(x), 2) for x in df["Close"].iloc[-60:]],
+    }

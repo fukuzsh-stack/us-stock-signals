@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>米国株シグナル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 計測器のように静かで正確。煽らない。
+   IDEA: 精密計器の目盛り。各銘柄のスコアを一本の目盛りとオレンジの針で読む。
+   PICTURE: 上部に全銘柄の分布を目盛り上の点で描き、しきい値の線を引く。
+   COLOUR and TYPE: アルミ #e9eaec / 黒 / 針のオレンジ #ff4f00、夜は #141517。Geist + Noto Sans JP。
+   LAYOUT: 1カラム。見出し→分布スケール→タブ→銘柄カード。 */
+:root{color-scheme:light dark;--bg:light-dark(#e9eaec,#141517);--card:light-dark(#f6f6f7,#1d1f22);--ink:light-dark(#111214,#ececee);--mute:light-dark(#5c6068,#9a9ea6);--line:light-dark(#c9cbcf,#33363b);--acc:#ff4f00;--up:light-dark(#0a7a3d,#3ccf7a);--dn:light-dark(#c62828,#ff6b6b)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Geist,"Noto Sans JP",system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:860px;margin:0 auto;padding:clamp(20px,4vw,40px) max(4vw,14px) 40px}
+h1{font-size:clamp(30px,6vw,44px);line-height:1.05;margin:0 0 6px;font-weight:700;text-wrap:balance}
+.sub{color:var(--mute);font-size:14px;margin:0}
+.demo{display:inline-block;margin-top:8px;font-size:13px;padding:2px 8px;border:1px solid var(--acc);color:var(--acc);border-radius:4px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:20px 0 8px}
+.kpis div{background:var(--card);padding:12px}
+.kpis b{display:block;font-size:clamp(24px,5vw,32px);line-height:1.1;font-variant-numeric:tabular-nums}
+.kpis span{font-size:13px;color:var(--mute)}
+.fig{position:relative;height:150px;margin:8px 0 4px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.cap{font-size:13px;color:var(--mute);margin:0 0 18px}
+.tabs{display:flex;gap:6px;overflow-x:auto;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:22px;font:inherit;font-size:15px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tools{display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+.tools input,.tools select{flex:1 1 160px;min-height:44px;font:inherit;font-size:16px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.list{display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tk{font-weight:700;font-size:20px}.nm{color:var(--mute);font-size:14px;flex:1 1 120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.px{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}.px small{margin-left:6px}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.star{color:var(--acc)}
+.meters{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:10px;align-items:center;margin-top:10px}
+.m{display:grid;grid-template-columns:3.2em minmax(0,1fr) 2.4em;align-items:center;gap:8px;font-size:13px;color:var(--mute)}
+.m+.m{margin-top:6px}
+.scale{position:relative;height:14px;border-bottom:1px solid var(--ink);background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 10%)}
+.needle{position:absolute;bottom:-1px;width:3px;height:16px;background:var(--acc);border-radius:2px;transform:translateX(-1px)}
+.thr{position:absolute;bottom:0;width:0;height:14px;border-left:1px dashed var(--mute)}
+.m b{color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;font-size:15px}
+.m b.on{color:var(--acc)}
+.spark{width:120px;height:40px}
+details{margin-top:8px;font-size:14px}summary{cursor:pointer;color:var(--mute);min-height:32px;display:flex;align-items:center}
+details ul{margin:4px 0 0;padding-left:1.2em}details h4{margin:8px 0 0;font-size:13px;color:var(--mute);font-weight:500}
+.empty{padding:28px;text-align:center;color:var(--mute);background:var(--card);border-radius:12px}
+.more{width:100%;min-height:44px;margin-top:10px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
+footer{margin-top:28px;font-size:13px;color:var(--mute);line-height:1.7}
+@media(max-width:600px){.meters{grid-template-columns:minmax(0,1fr)}.spark{width:100%}}
+@media(prefers-reduced-motion:no-preference){.needle{transition:left .5s ease-out}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">米国株シグナル</h1>
+  <p class="sub" id="asof">読み込み中…</p>
+  <div id="demo"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="fig"><svg id="dist" role="img" aria-label="全銘柄の長期・短期スコア分布"></svg></div>
+  <p class="cap">全銘柄の分布。横=長期スコア、縦=短期スコア。点線を超えた右・上の領域がシグナル点灯。★=ウォッチリスト</p>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-v="long" aria-selected="true">長期 買い候補</button>
+    <button role="tab" data-v="short" aria-selected="false">短期 買いシグナル</button>
+    <button role="tab" data-v="watch" aria-selected="false">ウォッチリスト</button>
+    <button role="tab" data-v="all" aria-selected="false">全銘柄</button>
+  </div>
+  <div class="tools">
+    <input id="q" type="search" placeholder="ティッカー・社名で検索" autocomplete="off">
+    <select id="sector"><option value="">全セクター</option></select>
+  </div>
+  <div class="list" id="list"></div>
+  <button class="more" id="more" hidden>さらに表示</button>
+  <footer>
+    <p><b>スコアの中身</b>　長期(100点)=長期トレンド50点(200日線・50日線・1年モメンタム・押し目)+割安度・財務50点(PER・PEG・ROE・成長率・負債・利益率)。短期(100点)=RSI反発25・MACDクロス20・ボリンジャー回復20・出来高急増20・200日線より上15。</p>
+    <p>データ: Yahoo Finance(yfinance経由、終値ベース)。本ページは機械的なスクリーニング結果であり、投資助言・売買の推奨ではありません。投資判断はご自身の責任で行ってください。</p>
+  </footer>
+</div>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let D=null,view='long',shown=30;
+try{const h=location.hash.slice(1);if(['long','short','watch','all'].includes(h))view=h}catch(e){}
+
+function rows(){
+  const q=$('q').value.trim().toLowerCase(),sec=$('sector').value;
+  let r=D.stocks.filter(s=>(!q||s.t.toLowerCase().includes(q)||String(s.name).toLowerCase().includes(q))&&(!sec||s.sector===sec));
+  if(view==='long')r=r.filter(s=>s.long_sig).sort((a,b)=>b.long-a.long);
+  else if(view==='short')r=r.filter(s=>s.short_sig).sort((a,b)=>b.short-a.short);
+  else if(view==='watch')r=r.filter(s=>s.watch).sort((a,b)=>(b.long||0)+b.short-((a.long||0)+a.short));
+  else r=r.sort((a,b)=>(b.long||0)-(a.long||0));
+  return r;
+}
+function spark(p){
+  if(!p||p.length<2)return'';
+  const mn=Math.min(...p),mx=Math.max(...p),W=120,H=40,k=(mx-mn)||1;
+  const pts=p.map((v,i)=>`${(i/(p.length-1)*W).toFixed(1)},${(H-2-(v-mn)/k*(H-4)).toFixed(1)}`).join(' ');
+  const c=p[p.length-1]>=p[0]?'var(--up)':'var(--dn)';
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="直近60日の値動き"><polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function meter(label,v,thr){
+  const val=v==null?'-':v,on=v!=null&&v>=thr;
+  return `<div class="m"><span>${label}</span><div class="scale"><div class="thr" style="left:${thr}%"></div>${v==null?'':`<div class="needle" style="left:${Math.max(0,Math.min(100,v))}%"></div>`}</div><b class="${on?'on':''}">${val}</b></div>`;
+}
+function card(s){
+  const ch=s.change||0,cls=ch>=0?'up':'dn';
+  const lr=(s.long_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
+  const sr=(s.short_reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('')||'<li>該当なし</li>';
+  return `<article class="card"><div class="top">${s.watch?'<span class="star" aria-label="ウォッチリスト">★</span>':''}<span class="tk">${esc(s.t)}</span><span class="nm">${esc(s.name)}</span><span class="px">$${esc(s.price)}<small class="${cls}">${ch>=0?'+':''}${esc((ch*100).toFixed(2))}%</small></span></div>
+  <div class="meters"><div>${meter('長期',s.long,D.thresholds.long)}${meter('短期',s.short,D.thresholds.short)}</div>${spark(s.spark)}</div>
+  <details><summary>理由を見る(RSI ${esc(s.rsi)}・${esc(s.sector)})</summary><h4>長期</h4><ul>${lr}</ul><h4>短期</h4><ul>${sr}</ul></details></article>`;
+}
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===view));
+  const r=rows();
+  $('list').innerHTML=r.length?r.slice(0,shown).map(card).join(''):`<div class="empty">${view==='watch'?'watchlist.txt に銘柄を追加すると表示されます':'今日は該当なし'}</div>`;
+  $('more').hidden=r.length<=shown;
+}
+function drawDist(){
+  const s=$('dist'),W=s.clientWidth,H=s.clientHeight,pad=4;
+  if(!D||!W)return;
+  const x=v=>pad+(v/100)*(W-2*pad),y=v=>H-pad-(v/100)*(H-2*pad);
+  const tl=D.thresholds.long,ts=D.thresholds.short;
+  let g=`<rect x="${x(tl)}" y="${pad}" width="${x(100)-x(tl)}" height="${H-2*pad}" fill="var(--acc)" opacity=".07"/><rect x="${pad}" y="${pad}" width="${W-2*pad}" height="${y(ts)-pad}" fill="var(--acc)" opacity=".07"/>`;
+  g+=`<line x1="${x(tl)}" x2="${x(tl)}" y1="${pad}" y2="${H-pad}" stroke="var(--mute)" stroke-dasharray="3 3"/><line x1="${pad}" x2="${W-pad}" y1="${y(ts)}" y2="${y(ts)}" stroke="var(--mute)" stroke-dasharray="3 3"/>`;
+  g+=`<line x1="${pad}" x2="${W-pad}" y1="${H-pad}" y2="${H-pad}" stroke="var(--ink)"/>`;
+  for(const st of D.stocks){if(st.long==null)continue;const on=st.long_sig||st.short_sig;
+    g+=`<circle cx="${x(st.long)}" cy="${y(st.short)}" r="${st.watch?4:2.5}" fill="${on?'var(--acc)':'var(--mute)'}" opacity="${on?.9:.45}"/>`}
+  s.innerHTML=g;
+}
+const ro=new ResizeObserver(drawDist);ro.observe($('dist'));
+
+function init(d){
+  D=d;
+  const t=d.generated_at?new Date(d.generated_at):null;
+  $('asof').textContent=`${d.market_date} 終値ベース・${d.count}銘柄を分析`+(t?`(更新 ${t.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})})`:'');
+  if(d.demo)$('demo').innerHTML='<span class="demo">模擬データで表示中(実データは自動実行開始後)</span>';
+  const nl=d.stocks.filter(s=>s.long_sig).length,ns=d.stocks.filter(s=>s.short_sig).length,nw=d.stocks.filter(s=>s.watch&&(s.long_sig||s.short_sig)).length;
+  $('kpis').innerHTML=`<div><b>${nl}</b><span>長期 買い候補</span></div><div><b>${ns}</b><span>短期 買いシグナル</span></div><div><b>${nw}</b><span>ウォッチで点灯</span></div>`;
+  const secs=[...new Set(d.stocks.map(s=>s.sector).filter(Boolean))].sort();
+  $('sector').innerHTML='<option value="">全セクター</option>'+secs.map(x=>`<option>${esc(x)}</option>`).join('');
+  render();drawDist();
+}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;shown=30;try{history.replaceState(null,'','#'+view)}catch(_){}render()});
+$('q').addEventListener('input',()=>{shown=30;render()});
+$('sector').addEventListener('change',()=>{shown=30;render()});
+$('more').addEventListener('click',()=>{shown+=30;render()});
+if(window.__DATA__)init(window.__DATA__);
+else fetch('data/signals.json',{cache:'no-store'}).then(r=>r.json()).then(init).catch(()=>{$('asof').textContent='データがまだありません(初回の自動実行後に表示されます)'});
+}
+</script>
+</body>
+</html>
