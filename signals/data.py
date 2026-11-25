@@ -78,7 +78,7 @@ FUND_KEYS = [
 ]
 
 
-def load_fundamentals(tickers: list[str], refresh_days: int, max_per_run: int = 200) -> dict:
+def load_fundamentals(tickers: list[str], refresh_days: int, max_per_run: int = 600) -> dict:
     """財務データをキャッシュ付きで取得。古い順に max_per_run 件だけ更新(レート制限対策)。"""
     import yfinance as yf
 
